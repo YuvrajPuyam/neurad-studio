@@ -17,6 +17,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+pytest.importorskip("py123d", reason="py123d is an optional dependency for these tests")
+
 from nerfstudio.data.dataparsers.py123d_utils import (
     DEFAULT_CAPTURE_METADATA_MODALITY,
     WLH_TO_LWH,
