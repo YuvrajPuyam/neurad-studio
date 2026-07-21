@@ -1,0 +1,79 @@
+# Example py123d-data settings for NeuRAD / SplatAD.
+#
+# Neurad passes these as CLI flags under the `py123d-data` subcommand
+# (see docs/py123d-data.md). This file is a readable reference — copy values
+# into your train command or adapt them for your export.
+#
+# Expected on-disk layout for the settings below:
+#
+#   data/py123d/
+#     logs/
+#       train/
+#         my_log_001/
+#           sync.arrow
+#           ego_state_se3.arrow
+#           box_detections_se3.arrow
+#           camera.pcam_f0.arrow
+#           camera.pcam_l0.arrow
+#           camera.pcam_r0.arrow
+#           lidar.lidar_merged.arrow
+#           custom.capture_metadata.arrow   # optional
+
+data: data/py123d
+log_id: my_log_001
+split: train
+
+# Camera / lidar names must match Arrow schema metadata (camera_name / lidar name).
+cameras:
+  - CAM_FRONT
+  - CAM_FRONT_LEFT
+  - CAM_FRONT_RIGHT
+lidars:
+  - LIDAR_TOP
+# neurad Lidars default; override to match your sensor.
+lidar_type: VELODYNE_VLP32C
+
+# Actors (requires box_detections_se3.arrow with an importable BoxDetectionLabel enum).
+load_cuboids: false
+include_deformable_actors: true
+allowed_rigid_classes:
+  - vehicle
+  - two_wheeler
+  - train
+  - bicycle
+  - motorcycle
+  - bus
+  - truck
+  - trailer
+allowed_deformable_classes:
+  - person
+  - human
+  - pedestrian
+
+# Merged multi-lidar clouds should keep this false.
+add_missing_points: false
+annotation_interval: 0.5
+
+# Rolling shutter (CLI overrides; not stored in the Arrow files).
+rolling_shutter_time: 0.03
+time_to_center_pixel: 0.0
+
+# Optional per-camera capture timestamps.
+use_capture_timestamps: true
+capture_metadata_modality: custom.capture_metadata
+
+# Equivalent train invocation:
+#
+#   TORCHDYNAMO_DISABLE=1 python nerfstudio/scripts/train.py splatad \
+#     --max-num-iterations 30001 \
+#     --vis tensorboard \
+#     py123d-data \
+#     --data data/py123d \
+#     --log-id my_log_001 \
+#     --split train \
+#     --cameras CAM_FRONT CAM_FRONT_LEFT CAM_FRONT_RIGHT \
+#     --lidars LIDAR_TOP \
+#     --lidar-type VELODYNE_VLP32C \
+#     --load-cuboids False \
+#     --rolling-shutter-time 0.03 \
+#     --time-to-center-pixel 0.0

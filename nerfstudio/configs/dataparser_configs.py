@@ -39,6 +39,13 @@ dataparsers = {
 }
 
 try:
+    from nerfstudio.data.dataparsers.py123d_dataparser import Py123dDataParserConfig
+
+    dataparsers["py123d-data"] = Py123dDataParserConfig()
+except ImportError:
+    CONSOLE.print("py123d dataparser has missing dependencies; install py123d to enable py123d-data.")
+
+try:
     from nerfstudio.data.dataparsers.waymo_dataparser import WoDParserConfig
 
     dataparsers["wod-data"] = WoDParserConfig()
