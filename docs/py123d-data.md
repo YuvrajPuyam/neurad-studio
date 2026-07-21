@@ -93,7 +93,7 @@ reference of common knobs.
 | `--log-id` | `""` | Log directory name under `logs/{split}/` |
 | `--split` | `train` | Split subdirectory |
 | `--cameras` | `()` | Required for camera training; names from Arrow `camera_name` |
-| `--lidars` | `()` | e.g. `LIDAR_TOP` |
+| `--lidars` | `()` | Exactly one name selecting an entry from `lidar.lidar_merged` (e.g. `LIDAR_TOP`) |
 | `--lidar-type` | `VELODYNE_VLP32C` | Neurad `Lidars` default; override to match your sensor |
 | `--load-cuboids` | `False` | Load actor trajectories from `box_detections_se3.arrow` |
 | `--include-deformable-actors` | `True` | Include person / pedestrian-style classes |

@@ -81,7 +81,11 @@ class Py123dDataParserConfig(ADDataParserConfig):
     cameras: Tuple[str, ...] = ()
     """Camera names from Arrow metadata (e.g. channel names stored in ``camera_name``)."""
     lidars: Tuple[str, ...] = ()
-    """Lidar names from Arrow metadata (e.g. ``LIDAR_TOP``)."""
+    """Lidar names from Arrow metadata (e.g. ``LIDAR_TOP``).
+
+    Currently only a single name is supported: it selects one entry from the
+    merged ``lidar.lidar_merged`` modality. Passing multiple names raises.
+    """
     lidar_type: LidarType = LidarType.VELODYNE_VLP32C
     """Lidar model used for rendering metadata.
 
@@ -159,6 +163,7 @@ class Py123dDataParser(ADDataParser):
         self._box_table = None
         self._box_label_class = None
         self._capture_table = None
+        self._image_tmpdir = None
         self._image_dir: Path = Path()
         self._image_paths: Dict[Tuple[str, int], Path] = {}
 
@@ -194,6 +199,11 @@ class Py123dDataParser(ADDataParser):
             self._camera_metadata[camera_name] = get_pinhole_camera_metadata(arrow_path)
 
         if self.config.lidars:
+            if len(self.config.lidars) != 1:
+                raise ValueError(
+                    "py123d-data currently supports exactly one lidar name selecting an entry "
+                    f"from lidar.lidar_merged; got {list(self.config.lidars)}"
+                )
             lidar_path = log_dir / f"{self._lidar_modality_key}.arrow"
             self._lidar_table = read_arrow_table(lidar_path)
             merged_metadata = get_lidar_merged_metadata(lidar_path)
@@ -220,17 +230,28 @@ class Py123dDataParser(ADDataParser):
                 log_dir, self.config.capture_metadata_modality
             )
 
-        self._image_dir = Path(tempfile.mkdtemp(prefix="py123d_images_"))
+        # Keep TemporaryDirectory alive for the parser lifetime so images remain
+        # readable, then clean up automatically when the parser is discarded.
+        self._image_tmpdir = tempfile.TemporaryDirectory(prefix="py123d_images_")
+        self._image_dir = Path(self._image_tmpdir.name)
 
     def _extract_camera_images(self) -> None:
+        """Extract image payloads for rows referenced by ``sync.arrow``."""
         for camera_name in self.config.cameras:
             modality_key = self._camera_name_to_modality[camera_name]
             table = self._camera_tables[modality_key]
             data_column = modality_data_column(table)
-            for row_idx in range(table.num_rows):
+            needed_rows = {
+                int(self._sync_table.column(modality_key)[sync_row].as_py())
+                for sync_row in iter_sync_rows(self._sync_table)
+            }
+            for row_idx in sorted(needed_rows):
                 image_bytes = data_column[row_idx].as_py()
                 if not image_bytes:
-                    continue
+                    raise ValueError(
+                        f"Missing image payload for camera '{camera_name}' "
+                        f"(modality '{modality_key}', row {row_idx})"
+                    )
                 image_path = self._image_dir / f"{modality_key.replace('.', '_')}_{row_idx:05d}.jpg"
                 image_path.write_bytes(image_bytes)
                 self._image_paths[(modality_key, row_idx)] = image_path

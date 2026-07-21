@@ -115,12 +115,14 @@ def find_lidar_entry(
 
 
 def decode_lidar_ipc(data: bytes) -> np.ndarray:
-    """Decode embedded lidar IPC bytes to ``[x, y, z, intensity, channel, ids]``."""
+    """Decode embedded lidar IPC bytes to ``[x, y, z, intensity, channel]``."""
     table = pa.ipc.open_stream(data).read_all()
-    xyz = table.select(["x", "y", "z"]).to_pandas().to_numpy(dtype=np.float32)
+    x = table.column("x").to_numpy().astype(np.float32, copy=False)
+    y = table.column("y").to_numpy().astype(np.float32, copy=False)
+    z = table.column("z").to_numpy().astype(np.float32, copy=False)
     intensity = table.column("intensity").to_numpy().astype(np.float32) / 255.0
     channel = table.column("channel").to_numpy().astype(np.float32)
-    return np.stack([xyz[:, 0], xyz[:, 1], xyz[:, 2], intensity, channel], axis=1)
+    return np.stack([x, y, z, intensity, channel], axis=1)
 
 
 def lidar_ipc_to_numpy(

@@ -21,10 +21,14 @@ import uuid
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
+import pytest
+
+# py123d is an optional dependency; skip this test package when it is not installed.
+pytest.importorskip("py123d")
+
 import msgpack
 import numpy as np
 import pyarrow as pa
-import pytest
 from PIL import Image
 from py123d.api.utils.arrow_metadata_utils import parse_log_directory_metadata
 from py123d.datatypes.custom.custom_modality import CustomModalityMetadata

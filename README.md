@@ -262,7 +262,7 @@ To add a dataset, create `nerfstudio/data/dataparsers/mydataset.py` containing o
 | 🚗 [Waymo v2](https://waymo.com/open/)         | 5 cameras | 64-beam lidar
 | 🚗 [py123d](https://github.com/kesai-labs/py123d) | user-specified (pinhole) | user-specified |
 
-A brief introduction about Waymo dataparser for NeuRAD can be found in [waymo_dataparser.md](./nerfstudio/data//dataparsers/waymo_dataparser.md).
+A brief introduction about Waymo dataparser for NeuRAD can be found in [waymo_dataparser.md](./nerfstudio/data/dataparsers/waymo_dataparser.md).
 For training on [py123d](https://github.com/kesai-labs/py123d) Arrow logs, see [docs/py123d-data.md](./docs/py123d-data.md) and the example config [docs/examples/py123d_example.yaml](./docs/examples/py123d_example.yaml).
 
 ## Adding Methods

@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+# py123d is an optional dependency; skip these tests when it is not installed.
 pytest.importorskip("py123d", reason="py123d is an optional dependency for these tests")
 
 from nerfstudio.data.dataparsers.py123d_utils import (
@@ -131,6 +132,25 @@ def test_py123d_dataparser_smoke(mini_log: Path) -> None:
     assert outputs.metadata["point_clouds"][0].shape[1] == 6
     assert outputs.cameras.distortion_params is not None
     assert torch.all(outputs.cameras.distortion_params[:, 3] == 0)
+
+
+def test_py123d_rejects_multiple_lidars(mini_log: Path) -> None:
+    pytest.importorskip("torch")
+
+    from nerfstudio.cameras.lidars import LidarType
+    from nerfstudio.data.dataparsers.py123d_dataparser import Py123dDataParser, Py123dDataParserConfig
+
+    config = Py123dDataParserConfig(
+        data=mini_log.parents[2],
+        log_id="mini_log_001",
+        split="train",
+        cameras=("CAM_FRONT",),
+        lidars=("LIDAR_TOP", "LIDAR_REAR"),
+        lidar_type=LidarType.VELODYNE_VLP32C,
+        train_split_fraction=1.0,
+    )
+    with pytest.raises(ValueError, match="exactly one lidar name"):
+        Py123dDataParser(config).get_dataparser_outputs("train")
 
 
 def test_py123d_actor_trajectories(mini_log: Path) -> None:
