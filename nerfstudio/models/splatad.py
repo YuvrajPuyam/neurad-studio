@@ -292,6 +292,9 @@ class SplatADModel(ADModel):
         config: SplatAD configuration to instantiate model
     """
 
+    # The viewer checks this to hand lidar renders to get_outputs_for_lidar instead of a RayBundle.
+    renders_lidar_by_rasterization = True
+
     config: SplatADModelConfig
 
     def __init__(
@@ -1523,20 +1526,42 @@ class SplatADModel(ADModel):
         return outputs, batch
 
     def _add_grid_raster_metadata(self, lidar: Lidars) -> None:
-        """Raster metadata for a regular azimuth/elevation grid (no ground-truth scan available)."""
+        """Raster metadata for a regular azimuth/elevation grid with no ground-truth scan (the viewer).
+
+        Cells are laid out the way the datamanager lays out real scans: azimuth ascending from -180 deg,
+        elevation ascending, padded to whole tiles. Padded cells carry a zero range so ``points_valid``
+        masks them out. A static virtual sensor gets zero velocities for the rolling-shutter code.
+        """
         assert (
             lidar.azimuths is not None and lidar.elevations is not None
         ), "grid rendering needs lidar.azimuths and lidar.elevations"
-        elevations = torch.rad2deg(lidar.elevations[0].flatten()).to(self.device)
-        azimuths = torch.rad2deg(lidar.azimuths[0].flatten()).to(self.device)
+        elevations = torch.rad2deg(lidar.elevations[0].flatten().float()).to(self.device)
+        azimuths = torch.rad2deg(lidar.azimuths[0].flatten().float()).to(self.device)
+        azimuth_resolution = float((azimuths[1] - azimuths[0]).abs()) if azimuths.numel() > 1 else 1.0
+        elevation_step = float((elevations[1] - elevations[0]).abs()) if elevations.numel() > 1 else 1.0
+        elevations, _ = torch.sort(elevations)
+        azimuths, _ = torch.sort((azimuths + 180.0) % 360.0 - 180.0)
+        n_elev, n_azim = elevations.numel(), azimuths.numel()
+        pad_h = (-n_elev) % ELEV_CHANNELS_PER_TILE
+        pad_w = (-n_azim) % AZIM_CHANNELS_PER_TILE
+        if pad_h:
+            extra = elevations[-1] + elevation_step * torch.arange(1, pad_h + 1, device=self.device)
+            elevations = torch.cat([elevations, extra])
+        if pad_w:
+            azimuths = torch.cat([azimuths, azimuths[-1:].expand(pad_w)])
         elevs, azims = torch.meshgrid(elevations, azimuths, indexing="ij")
+        valid = torch.ones_like(azims)
+        valid[n_elev:, :] = 0.0
+        valid[:, n_azim:] = 0.0
         raster_pts = torch.stack(
-            [azims, elevs, torch.ones_like(azims), torch.zeros_like(azims), torch.zeros_like(azims)], dim=-1
+            [azims, elevs, valid, torch.zeros_like(azims), torch.zeros_like(azims)], dim=-1
         )[None]
         boundaries = elevations[::ELEV_CHANNELS_PER_TILE]
         lidar.metadata["raster_pts"] = raster_pts
         lidar.metadata["elevation_boundaries"] = torch.cat([boundaries, boundaries[-1:] + 1.0])
-        lidar.metadata["azimuth_resolution"] = float(azimuths[1] - azimuths[0])
+        lidar.metadata["azimuth_resolution"] = azimuth_resolution
+        lidar.metadata.setdefault("linear_velocities_local", torch.zeros(1, 3, device=self.device))
+        lidar.metadata.setdefault("angular_velocities_local", torch.zeros(1, 3, device=self.device))
 
     def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
