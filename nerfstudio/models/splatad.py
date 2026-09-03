@@ -285,6 +285,24 @@ class SplatADModelConfig(ADModelConfig):
             self.init_scale = 0.2
 
 
+
+def grid_tile_elevation_boundaries(elevations: torch.Tensor) -> torch.Tensor:
+    """Tile boundaries for a sorted elevation grid whose length is a multiple of ELEV_CHANNELS_PER_TILE.
+
+    Same construction as the datamanager's get_lidar_raster_params: one degree below the first
+    channel, the midpoint between consecutive groups of ELEV_CHANNELS_PER_TILE channels, and one
+    degree above the last channel, so every tile (including the last) is bracketed.
+    """
+    n = ELEV_CHANNELS_PER_TILE
+    assert elevations.numel() % n == 0, "grid must be padded to whole elevation tiles"
+    return torch.cat(
+        [
+            elevations[0:1] - 1.0,
+            (elevations[n::n] + elevations[n - 1 : -1 : n]) / 2,
+            elevations[-1:] + 1.0,
+        ]
+    )
+
 class SplatADModel(ADModel):
     """Neurad-studio's implementation of Gaussian Splatting
 
@@ -1556,9 +1574,8 @@ class SplatADModel(ADModel):
         raster_pts = torch.stack(
             [azims, elevs, valid, torch.zeros_like(azims), torch.zeros_like(azims)], dim=-1
         )[None]
-        boundaries = elevations[::ELEV_CHANNELS_PER_TILE]
         lidar.metadata["raster_pts"] = raster_pts
-        lidar.metadata["elevation_boundaries"] = torch.cat([boundaries, boundaries[-1:] + 1.0])
+        lidar.metadata["elevation_boundaries"] = grid_tile_elevation_boundaries(elevations)
         lidar.metadata["azimuth_resolution"] = azimuth_resolution
         lidar.metadata.setdefault("linear_velocities_local", torch.zeros(1, 3, device=self.device))
         lidar.metadata.setdefault("angular_velocities_local", torch.zeros(1, 3, device=self.device))

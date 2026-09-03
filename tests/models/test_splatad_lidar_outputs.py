@@ -40,3 +40,19 @@ def test_lidars_accept_azimuth_elevation_grids():
     )
     assert lidar.shape == (1,)
     assert lidar.azimuths.shape == (1, 720, 1) and lidar.elevations.shape == (1, 24, 1)
+
+
+def test_grid_tile_boundaries_bracket_every_tile():
+    """Viewer default: 24 beams over -15..15 deg. The last boundary must lie above the top beam
+    (the earlier construction stopped at 6.87 deg and dropped the upper tiles)."""
+    from nerfstudio.models.splatad import ELEV_CHANNELS_PER_TILE, grid_tile_elevation_boundaries
+
+    elevations = torch.linspace(-15.0, 15.0, 24)
+    b = grid_tile_elevation_boundaries(elevations)
+    assert b.numel() == 24 // ELEV_CHANNELS_PER_TILE + 1
+    assert torch.all(b[1:] > b[:-1])
+    assert b[0] < elevations[0] and b[-1] > elevations[-1]
+    # every channel falls inside exactly one tile
+    tile = torch.bucketize(elevations, b) - 1
+    assert tile.min() == 0 and tile.max() == 24 // ELEV_CHANNELS_PER_TILE - 1
+    assert torch.equal(tile, torch.arange(24) // ELEV_CHANNELS_PER_TILE)
