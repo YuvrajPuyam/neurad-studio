@@ -26,20 +26,24 @@ import pytest
 # py123d is an optional dependency; skip this test package when it is not installed.
 pytest.importorskip("py123d")
 
-import msgpack
-import numpy as np
-import pyarrow as pa
-from PIL import Image
-from py123d.api.utils.arrow_metadata_utils import parse_log_directory_metadata
-from py123d.datatypes.custom.custom_modality import CustomModalityMetadata
-from py123d.datatypes.detections.box_detection_label import DefaultBoxDetectionLabel
-from py123d.datatypes.detections.box_detections_metadata import BoxDetectionsSE3Metadata
-from py123d.datatypes.metadata.log_metadata import LogMetadata
-from py123d.datatypes.sensors.base_camera import CameraID
-from py123d.datatypes.sensors.lidar import LidarID, LidarMergedMetadata, LidarMetadata
-from py123d.datatypes.sensors.pinhole_camera import PinholeCameraMetadata, PinholeDistortion, PinholeIntrinsics
-from py123d.datatypes.vehicle_state.ego_state_metadata import EgoStateSE3Metadata
-from py123d.geometry.pose import PoseSE3
+import msgpack  # noqa: E402
+import numpy as np  # noqa: E402
+import pyarrow as pa  # noqa: E402
+from PIL import Image  # noqa: E402
+from py123d.api.utils.arrow_metadata_utils import parse_log_directory_metadata  # noqa: E402
+from py123d.datatypes.custom.custom_modality import CustomModalityMetadata  # noqa: E402
+from py123d.datatypes.detections.box_detection_label import DefaultBoxDetectionLabel  # noqa: E402
+from py123d.datatypes.detections.box_detections_metadata import BoxDetectionsSE3Metadata  # noqa: E402
+from py123d.datatypes.metadata.log_metadata import LogMetadata  # noqa: E402
+from py123d.datatypes.sensors.base_camera import CameraID  # noqa: E402
+from py123d.datatypes.sensors.lidar import LidarID, LidarMergedMetadata, LidarMetadata  # noqa: E402
+from py123d.datatypes.sensors.pinhole_camera import (  # noqa: E402
+    PinholeCameraMetadata,
+    PinholeDistortion,
+    PinholeIntrinsics,
+)
+from py123d.datatypes.vehicle_state.ego_state_metadata import EgoStateSE3Metadata  # noqa: E402
+from py123d.geometry.pose import PoseSE3  # noqa: E402
 
 MINI_LOG_ID = "mini_log_001"
 MINI_SPLIT = "train"
@@ -160,7 +164,9 @@ def build_mini_py123d_log(data_root: Path, *, num_samples: int = NUM_SAMPLES) ->
     ego_table = pa.table(
         {
             "ego_state_se3.timestamp_us": pa.array(timestamps, type=pa.int64()),
-            "ego_state_se3.imu_se3": pa.array([_pose(float(i)) for i in range(num_samples)], type=pa.list_(pa.float64(), 7)),
+            "ego_state_se3.imu_se3": pa.array(
+                [_pose(float(i)) for i in range(num_samples)], type=pa.list_(pa.float64(), 7)
+            ),
             "ego_state_se3.dynamic_state_se3": pa.array(
                 [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for _ in range(num_samples)],
                 type=pa.list_(pa.float64(), 9),
@@ -182,9 +188,7 @@ def build_mini_py123d_log(data_root: Path, *, num_samples: int = NUM_SAMPLES) ->
     lidar_table = pa.table(
         {
             "lidar.lidar_merged.timestamp_us": pa.array(timestamps, type=pa.int64()),
-            "lidar.lidar_merged.end_timestamp_us": pa.array(
-                [ts + 50_000 for ts in timestamps], type=pa.int64()
-            ),
+            "lidar.lidar_merged.end_timestamp_us": pa.array([ts + 50_000 for ts in timestamps], type=pa.int64()),
             "lidar.lidar_merged.data": pa.array(
                 [_lidar_ipc_bytes(24 + i) for i in range(num_samples)], type=pa.binary()
             ),
@@ -233,14 +237,10 @@ def build_mini_py123d_log(data_root: Path, *, num_samples: int = NUM_SAMPLES) ->
     box_table = pa.table(
         {
             "box_detections_se3.timestamp_us": pa.array(timestamps, type=pa.int64()),
-            "box_detections_se3.bounding_box_se3": pa.array(
-                boxes, type=pa.list_(pa.list_(pa.float64(), 10))
-            ),
+            "box_detections_se3.bounding_box_se3": pa.array(boxes, type=pa.list_(pa.list_(pa.float64(), 10))),
             "box_detections_se3.track_token": pa.array(tokens, type=pa.list_(pa.string())),
             "box_detections_se3.label": pa.array(labels, type=pa.list_(pa.uint16())),
-            "box_detections_se3.velocity_3d": pa.array(
-                velocities, type=pa.list_(pa.list_(pa.float64(), 3))
-            ),
+            "box_detections_se3.velocity_3d": pa.array(velocities, type=pa.list_(pa.list_(pa.float64(), 3))),
             "box_detections_se3.num_lidar_points": pa.array(num_pts, type=pa.list_(pa.int32())),
         }
     )

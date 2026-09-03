@@ -20,7 +20,7 @@ import pytest
 # py123d is an optional dependency; skip these tests when it is not installed.
 pytest.importorskip("py123d", reason="py123d is an optional dependency for these tests")
 
-from nerfstudio.data.dataparsers.py123d_utils import (
+from nerfstudio.data.dataparsers.py123d_utils import (  # noqa: E402
     DEFAULT_CAPTURE_METADATA_MODALITY,
     WLH_TO_LWH,
     bounding_box_se3_from_list,
