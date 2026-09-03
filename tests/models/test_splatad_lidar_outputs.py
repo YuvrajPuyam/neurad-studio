@@ -1,10 +1,11 @@
 """Regression tests for SplatAD lidar rendering through the sensor API (issues #75, #79)."""
+
 import torch
 
-from nerfstudio.cameras.lidars import LidarType
+from nerfstudio.cameras.lidars import Lidars, LidarType
 from nerfstudio.data.datamanagers.full_images_lidar_datamanager import get_lidar_raster_params
 from nerfstudio.models.ad_model import ADModel
-from nerfstudio.models.splatad import SplatADModel
+from nerfstudio.models.splatad import ELEV_CHANNELS_PER_TILE, SplatADModel, grid_tile_elevation_boundaries
 
 
 def test_splatad_overrides_ray_based_lidar_rendering():
@@ -30,7 +31,6 @@ def test_splatad_advertises_rasterized_lidar_to_the_viewer():
 
 def test_lidars_accept_azimuth_elevation_grids():
     """The viewer builds a Lidars on a regular grid; azimuths/elevations are [*num_lidars, n, 1] fields."""
-    from nerfstudio.cameras.lidars import Lidars
 
     lidar = Lidars(
         lidar_to_worlds=torch.eye(4)[:3][None],
@@ -45,8 +45,6 @@ def test_lidars_accept_azimuth_elevation_grids():
 def test_grid_tile_boundaries_bracket_every_tile():
     """Viewer default: 24 beams over -15..15 deg. The last boundary must lie above the top beam
     (the earlier construction stopped at 6.87 deg and dropped the upper tiles)."""
-    from nerfstudio.models.splatad import ELEV_CHANNELS_PER_TILE, grid_tile_elevation_boundaries
-
     elevations = torch.linspace(-15.0, 15.0, 24)
     b = grid_tile_elevation_boundaries(elevations)
     assert b.numel() == 24 // ELEV_CHANNELS_PER_TILE + 1

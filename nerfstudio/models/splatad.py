@@ -285,7 +285,6 @@ class SplatADModelConfig(ADModelConfig):
             self.init_scale = 0.2
 
 
-
 def grid_tile_elevation_boundaries(elevations: torch.Tensor) -> torch.Tensor:
     """Tile boundaries for a sorted elevation grid whose length is a multiple of ELEV_CHANNELS_PER_TILE.
 
@@ -302,6 +301,7 @@ def grid_tile_elevation_boundaries(elevations: torch.Tensor) -> torch.Tensor:
             elevations[-1:] + 1.0,
         ]
     )
+
 
 class SplatADModel(ADModel):
     """Neurad-studio's implementation of Gaussian Splatting
@@ -1571,9 +1571,7 @@ class SplatADModel(ADModel):
         valid = torch.ones_like(azims)
         valid[n_elev:, :] = 0.0
         valid[:, n_azim:] = 0.0
-        raster_pts = torch.stack(
-            [azims, elevs, valid, torch.zeros_like(azims), torch.zeros_like(azims)], dim=-1
-        )[None]
+        raster_pts = torch.stack([azims, elevs, valid, torch.zeros_like(azims), torch.zeros_like(azims)], dim=-1)[None]
         lidar.metadata["raster_pts"] = raster_pts
         lidar.metadata["elevation_boundaries"] = grid_tile_elevation_boundaries(elevations)
         lidar.metadata["azimuth_resolution"] = azimuth_resolution
